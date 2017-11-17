@@ -3,6 +3,10 @@ from distutils.core import setup
 setup(
     name='PepWitch',
     version='1.2',
+    packages=['numpy 1.13.3',
+              'matplotlib 2.1.0',
+              'scipy 1.0.0',
+              'statsmodels 0.8.0'],
     url='',
     license='Free to use, edit and distribute on condition of a citation for any research that employs the use of this code or any of its derivatives (in whole or in part)',
     author='David Handler',
