@@ -1,0 +1,27 @@
+For now, the use of this software is granted to the user under the following conditions:
+
+1) Users are free to use, edit and distribute this software on condition of a citation to [paper pending] for any research that employs the use of this code or any of its derivatives (in whole or in part).
+
+[That's good manners :) If you use the code in your project, please consider providing a citation.]
+
+2) Commercial use of this code or any derivatives is prohibited without express concent of the developer.
+
+[It's not going to make anyone rich anytime soon, but if you want to make money from this somehow, just give me a shout and I'll probably say yes.]
+
+3) Any derivative code that, in whole or in part, makes use of the original code or any further derivative code as source must adhere to this license.
+
+[So, don't make a copy of the original and then slap another license on it. Rude.]
+
+4) Users will not take this code (&/ derivatives) and, with or without modification, claim the work as their own. 
+
+[Very rude. Don't do this.]
+
+5) Users also agree that they will not publish this code (&/ derivatives), or an article about this code (&/ derivatives) in a relevant  journal, claiming the work as their own.
+
+Extraordinarily rude. Do this if you want to end your career and reputation with a bang ;)
+
+~
+
+In the future, once a publicaiton has been submitted to a relevant proteomics/bioinformatics journal, the license will switch to something akin to a GNU GPLv3 license + citation clause. Right now, though, I just want people to use it and be happy.
+
+Look, I'm not a lawyer, just be fairminded. Don't publish the code claiming it as your own, don't modify it and claim it as your own, and if you find it useful, then cite the paper that's coming out.
