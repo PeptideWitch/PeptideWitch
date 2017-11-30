@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PepWitch</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+$(function() {
+    var wordCounts = {};
+
+    $("input[type='text']:not(:disabled)").each(function() {
+        var input = '#' + this.id;
+        word_count(input);
+
+        $(this).keyup(function() {
+            word_count(input);
+        })
+
+    });
+
+    function word_count(field) {
+        var number = 0;
+        var matches = $(field).val().match(/\b/g);
+        if (matches) {
+            number = matches.length / 2;
+        }
+        wordCounts[field] = number;
+        var finalCount = 0;
+        $.each(wordCounts, function(k, v) {
+            finalCount += v;
+        });
+        $('#finalcount').val(finalCount)
+    }
+});
+</script>
+</head>
+<body>
+
+<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js?ver=1.4.2'></script>
+<script>
+$("#textBox").keyup(function(){
+   $("#message").val($(this).val());
+});</script>
+
+<form id="uploadbanner" enctype="multipart/form-data" method="post" action="/upload">
+    <div class="form-group">
+
+<h1>Welcome to PepWitch</h1>
+
+<h2>File Upload</h2><br>
+    Upload files here:
+    <input type="file" name="file[]" id="inputnameid" multiple=""/> <br><br>
+
+Type the name of your file stems here. If you're uploading more than two states then name the control first. <input id="a" name="names" type="text" onclick="save()" /><br/>
+State number: <input id="finalcount" disabled /><br><br>
+Replicate Number: <input name="replicate" value="6" type="text" />
+
+<h2>Other Inputs</h2>
+    Spectral fraction:
+    <input type="text" name="spcfrac" value="0.1"> <br><br>
+    Minimum Spectral Count:
+    <input type="text" name="minspc" value="5"> <br><br>
+    Disregard replicates:
+    <input type="text" name="disregard" value="0"> <br><br>
+    P Value:
+    <input type="text" name="pval" value="0.05"> <br><br>
+
+</div>
+<input class="btn btn-primary" type="submit" value="Upload">
+</form>
+
+</body>
+</body>
+</html>
