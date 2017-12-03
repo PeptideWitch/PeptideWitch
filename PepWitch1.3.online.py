@@ -6,6 +6,8 @@ import time
 import datetime
 import itertools
 import csv
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib_venn import venn2
@@ -16,6 +18,7 @@ from statistics import mean
 import bisect
 from sys import argv
 import shutil
+import sys
 
 def main():
     np.set_printoptions(precision=2)
@@ -130,7 +133,7 @@ def main():
 
     # CSVInputName, Control, Wild, DesiredReplicateNumber = GetInputName()
 
-    DayandTime = str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')) + '-' + '-'.join(CSVInputName) + "-" + str(MinSpc)
+    DayandTime = os.path.dirname(os.path.realpath(__file__)) + "/output/" + str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')) + '-' + '-'.join(CSVInputName) + "-" + str(MinSpc)
     os.makedirs(DayandTime)
 
     starttime = time.perf_counter()
@@ -425,7 +428,7 @@ def main():
                 listheadersSpC = list(str(name[y]) + " SpC R" + str(x + 1) for x in range(0, DesiredReplicateNumber))
                 listheadersNSAF = list(str(name[y]) + " NSAF R" + str(x + 1) for x in range(0, DesiredReplicateNumber))
                 listheadersloge = list(str(name[y]) + " -log(e) R" + str(x + 1) for x in range(0, DesiredReplicateNumber))
-                combinedheader =  ["Protein", "MW", *listheadersSpC, *listheadersNSAF, *listheadersloge]
+                combinedheader = ["Protein", "MW", *listheadersSpC, *listheadersNSAF, *listheadersloge]
                 newpath = os.path.join(DayandTime + subdirectory, "DataQuality-" + str(name[y]) + ".csv")
                 with open(newpath, 'w') as myfile:
                     wr = csv.writer(myfile, delimiter=',', lineterminator='\n')
@@ -1129,8 +1132,9 @@ def main():
     endtime = time.perf_counter()
     print("Total Processing time: " + str(endtime - starttime))
 
-    shutil.make_archive("Output", 'zip', DayandTime)
+    shutil.make_archive(os.path.dirname(os.path.realpath(__file__)) + "/Output", 'zip', DayandTime)
     shutil.rmtree(DayandTime)
 
 if __name__ == "__main__":
+    print("Here2: " + str(sys.version))
     main()
