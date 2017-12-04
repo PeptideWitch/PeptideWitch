@@ -12,8 +12,11 @@ Alternatively, go to https://www.python.org/downloads/release/python-363/ and do
 Now, to make things easy for yourself, I suggest making a virtual environment using either the anaconda prompt or command prompt.
 
 'pip install virtualenv'
+
 'virtualenv {directory}'
+
 'cd \path\to\{directory}\Scripts\'
+
 'activate'
 
 Your command prompt should change to (directory) C:\path...
