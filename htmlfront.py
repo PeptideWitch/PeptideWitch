@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, url_for
 import os
 import datetime
 import shutil
+import sys
 
 app = Flask(__name__)
 
@@ -9,20 +10,18 @@ app = Flask(__name__)
 def home(name=None):
     if request.method == "GET":
         if os.path.isfile("Output.zip"):
-            print("File Found")
             os.remove("Output.zip")
-    return render_template('home.html', name=name)
-
-@app.route('/upload', methods=['GET', 'POST'])
-def upload():
-    dayandTime = str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S'))
-    direc = os.path.join(os.getcwd(), 'uploads' , dayandTime)
-    try:
-        os.mkdir(direc)
-    except FileExistsError:
-        print("Directory exists")
-    print(direc)
+            print("File Erased")
+        return render_template('home2.html', name=name)
     if request.method == "POST":
+        print("Here" + sys.version)
+        DayandTime = str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S'))
+        direc = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'uploads' , DayandTime)
+        try:
+            os.mkdir(direc)
+        except FileExistsError:
+            print("Directory exists")
+        print(direc)
         uploaded_files = request.files.getlist("file[]")
         names = request.form["names"]
         minspc = request.form["minspc"]
@@ -34,9 +33,11 @@ def upload():
             newpath = os.path.join(direc, file.filename)
             file.save(newpath)
             file.close()
-        os.system("python PepWitch1.3.Online.py " + str(minspc) + " " + str(disregard) + " "  + str(pval) + " " + str(replicates) + " " + str(spcfrac) + " " + str(direc) + " "+ str(names))
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        os.system("python -V")
+        os.system("/home/PeptideWitch/.virtualenvs/my-virtualenv/bin/python3.6 PepWitch1.3.Online.py " + str(minspc) + " " + str(disregard) + " "  + str(pval) + " " + str(replicates) + " " + str(spcfrac) + " " + str(direc) + " "+ str(names))
         shutil.rmtree(direc)
-        return send_file("Output.zip", as_attachment=True)
+        return send_file(os.path.dirname(os.path.realpath(__file__)) + "/Output.zip", as_attachment=True)
 
 if __name__ == "__main__":
     app.run()
