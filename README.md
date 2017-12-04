@@ -1,25 +1,38 @@
 # PeptideWitch
 For producing high stringency protein identification data from label-free shotgun proteomics results
 
-*****SETUP:*****
+*****LOCAL VERSION SETUP:*****
 
-1) I highly recommend you download Anaconda: https://www.anaconda.com/download/ and make sure to grab the 3.6 version!!!
+1) Python Environment:
 
-Anaconda is a cool python environment tailor-made for scientific application, and makes running packages/modules/scripts like mine a lot smoother. After you download anaconda, install it and make sure to add it to your %path% (it's an option in the install menus). 
+I highly recommend you download Anaconda: https://www.anaconda.com/download/ and make sure to grab the 3.6 version! Anaconda is a cool python environment tailor-made for scientific application, and makes running packages/modules/scripts like mine a lot smoother. After you download anaconda, install it and make sure to add it to your %path% (it's an option in the install menus). 
 
-2) After that's all done, go ahead and download the master .zip file of PeptideWitch. Unzip it to a spot you like. 
+Alternatively, go to https://www.python.org/downloads/release/python-363/ and download v 3.6
 
-3) Next, go and find something called the anaconda prompt from your menus, open it (it looks like a command prompt), and enter:
+Now, to make things easy for yourself, I suggest making a virtual environment using either the anaconda prompt or command prompt.
 
-<cd (the path that you unzipped PeptideWitch to)>
+'pip install virtualenv'
+'virtualenv {directory}'
+'cd \path\to\{directory}\Scripts\'
+'activate'
+
+Your command prompt should change to (directory) C:\path...
+
+Now you're inside a closed python world.
+
+2) Aownload the master .zip file of PeptideWitch. Unzip it to a spot you like. 
+
+3) Go back to command prompt:
+
+'cd (the path that you unzipped PeptideWitch to)'
 
 eg 
 
-<cd C:\David\PepWitch>
+'cd C:\David\PepWitch'
 
 4) Next, enter the following:
 
-<pip install -r requirements.txt>
+pip install -r requirements.txt
 
 This will read the requirements text file and pull in some specific updates and modules that PeptideWitch requires. If you don't do this, PeptideWitch won't run.
 
@@ -27,7 +40,7 @@ And you're done!
 
 *****RUNNING PEPWITCH:*****
 
-Using the same anaconda command prompt, run PepWitch by navigating to the folder PeptideWitch lives in and entering:
+Using the same anaconda or command prompt, run PepWitch by cd navigating to the folder PeptideWitch lives in and entering:
 
 PeptideWitch1.2.py
 
