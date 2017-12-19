@@ -23,7 +23,7 @@ Your command prompt should change to (directory) C:\path...
 
 Now you're inside a closed python world.
 
-2) Aownload the master .zip file of PeptideWitch. Unzip it to a spot you like. 
+2) Download the master .zip file of PeptideWitch. Unzip it to a spot you like. 
 
 3) Go back to command prompt:
 
