@@ -12,7 +12,7 @@ def home(name=None):
         if os.path.isfile("Output.zip"):
             os.remove("Output.zip")
             print("File Erased")
-        return render_template('home2.html', name=name)
+        return render_template('home.html', name=name)
     if request.method == "POST":
         print("Here" + sys.version)
         DayandTime = str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S'))
@@ -36,7 +36,7 @@ def home(name=None):
             file.close()
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
         os.system("python -V")
-        os.system("/home/PeptideWitch/.virtualenvs/my-virtualenv/bin/python3.6 PepWitch1.3.Online.py " + str(minspc) + " " + str(disregard) + " "  + str(pval) + " " + str(replicates) + " " + str(spcfrac) + " " + str(direc) + " " + str(engine) + " " + str(names))
+        os.system("/home/PeptideWitch/.virtualenvs/my-virtualenv/bin/python3.6 PepWitch1.4.Online.py " + str(minspc) + " " + str(disregard) + " "  + str(pval) + " " + str(replicates) + " " + str(spcfrac) + " " + str(direc) + " " + str(engine) + " " + str(names))
         shutil.rmtree(direc)
         return send_file(os.path.dirname(os.path.realpath(__file__)) + "/Output.zip", as_attachment=True)
 
