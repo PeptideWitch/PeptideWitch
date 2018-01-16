@@ -29,13 +29,14 @@ def home(name=None):
         pval = request.form["pval"]
         replicates = request.form["replicate"]
         spcfrac = request.form["spcfrac"]
+        engine = request.form["engine"]
         for file in uploaded_files:
             newpath = os.path.join(direc, file.filename)
             file.save(newpath)
             file.close()
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
         os.system("python -V")
-        os.system("/home/PeptideWitch/.virtualenvs/my-virtualenv/bin/python3.6 PepWitch1.3.Online.py " + str(minspc) + " " + str(disregard) + " "  + str(pval) + " " + str(replicates) + " " + str(spcfrac) + " " + str(direc) + " "+ str(names))
+        os.system("/home/PeptideWitch/.virtualenvs/my-virtualenv/bin/python3.6 PepWitch1.3.Online.py " + str(minspc) + " " + str(disregard) + " "  + str(pval) + " " + str(replicates) + " " + str(spcfrac) + " " + str(direc) + " " + str(engine) + " " + str(names))
         shutil.rmtree(direc)
         return send_file(os.path.dirname(os.path.realpath(__file__)) + "/Output.zip", as_attachment=True)
 
