@@ -149,14 +149,14 @@ def main():
 
             if Engine == "GPM":
                 try:
-                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,2,5,3],  dtype = None) for x in glob.glob(str(argv[6]) + "/" + str(name) + "*.csv")] # Imports Protein Name, Spectral Count, Mol. Weight, score
+                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,2,5,3],  dtype = ('U5', 'float32','float32','uint32')) for x in glob.glob(str(argv[6]) + "/" + str(name) + "*.csv")] # Imports Protein Name, Spectral Count, Mol. Weight, score
                 except ValueError:
                     print("######################################")
                     print("Error #4: Your CSV file is empty or incompatible. Currently, only GPM table *.csv outputs are supported." )
                     exit()
             elif Engine == "PD":
                 try:
-                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,7,9,2],  dtype = None) for x in glob.glob(str(argv[6]) + "/" + str(name) + "*.csv")] # Imports Protein Name, PSM, Mol. Weight, score
+                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,7,9,2],  dtype = ('U5', 'float32','float32','uint32')) for x in glob.glob(str(argv[6]) + "/" + str(name) + "*.csv")] # Imports Protein Name, PSM, Mol. Weight, score
                 except ValueError:
                     print("######################################")
                     print("Error #4: Your CSV file is empty or incompatible. Currently, only GPM table *.csv outputs are supported." )
