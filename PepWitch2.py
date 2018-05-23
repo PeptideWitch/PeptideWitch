@@ -20,7 +20,6 @@ import sys
 def main(mode):
 
     #Setting up a few housekeeping items.
-    starttime = time.perf_counter()
     np.set_printoptions(precision=2)
     TTest = False
     UniqueA = False
@@ -155,13 +154,14 @@ def main(mode):
         else:
             Wild = CSVInputName[1]
         DesiredReplicateNumber = int(argv[4])
-    elif mode == "offline":
+    else:
         WorkingDirectory = os.path.dirname(os.path.realpath(__file__))
         CSVInputName, Control, Wild, DesiredReplicateNumber, Disregard, MinSpc, SpectralFraction, SameSamePValue, Engine = GetInputName()
 
-    #Establishes directory paths
+    #Establishes directory paths and begins timer
     DayandTime = os.path.dirname(os.path.realpath(__file__)) + "/output/" + str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')) + '-' + '-'.join(CSVInputName) + "-" + str(MinSpc)
     os.makedirs(DayandTime)
+    starttime = time.perf_counter()
 
     ## This class imports the .csv files into our workflow and makes a list of the replicates.
     def ImportProteinFiles(inputnames):
@@ -306,17 +306,17 @@ def main(mode):
 
                 if Q == -1:
                     for name in setstateControl.intersection(setstateWild):
-                        FC = mean(filter[c][name][2]) / mean(filter[w][name][2])
-                        ttestdict[name] = stats.ttest_ind(filter[c][name][2], filter[w][name][2])[1], filter[c][name], filter[w][name], FC
+                        FC = mean(filter[c][name][4]) / mean(filter[w][name][4])
+                        ttestdict[name] = stats.ttest_rel(filter[c][name][4], filter[w][name][4])[1], filter[c][name], filter[w][name], FC
                     ttestlist.append(ttestdict)
                 elif Q != -1:
                     for name in setstateControl.intersection(setstateWild):
-                        ttestdict[name] = stats.ttest_ind(filter[c][name][2], filter[w][name][2])[1],
+                        ttestdict[name] = stats.ttest_rel(filter[c][name][4], filter[w][name][4])[1],
                     tvals = [i[0] for i in ttestdict.values()]
                     qtestlista.append(multipletests(tvals, method='fdr_bh')[1])
                     g = 0
                     for name in setstateControl.intersection(setstateWild):
-                        FC = mean(filter[c][name][2]) / mean(filter[w][name][2])
+                        FC = mean(filter[c][name][4]) / mean(filter[w][name][4])
                         qtestdict[name] = qtestlista[0][g], filter[c][name], filter[w][name], FC
                         g += 1
                     qtestlist.append(qtestdict)
@@ -349,16 +349,16 @@ def main(mode):
 
             if Q == -1:
                 for name in setstateA.intersection(setstateB):
-                    FC = mean(filter[0][name][2]) / mean(filter[1][name][2])
-                    ttestdict[name] = stats.ttest_ind(filter[0][name][2], filter[1][name][2])[1], filter[0][name], filter[1][name], FC
+                    FC = mean(filter[0][name][4]) / mean(filter[1][name][4])
+                    ttestdict[name] = stats.ttest_rel(filter[0][name][4], filter[1][name][4])[1], filter[0][name], filter[1][name], FC
             elif Q != -1:
                 for name in setstateA.intersection(setstateB):
-                    ttestdict[name] = stats.ttest_ind(filter[0][name][2], filter[1][name][2])[1],
+                    ttestdict[name] = stats.ttest_rel(filter[0][name][4], filter[1][name][4])[1],
                 tvals = [i[0] for i in ttestdict.values()]
                 qtestlist.append(multipletests(tvals, method='fdr_bh')[1])
                 g = 0
                 for name in setstateA.intersection(setstateB):
-                    FC = mean(filter[0][name][2]) / mean(filter[1][name][2])
+                    FC = mean(filter[0][name][4]) / mean(filter[1][name][4])
                     qtestdict[name] = qtestlist[0][g], filter[0][name], filter[1][name], FC
                     g += 1
 
@@ -638,7 +638,7 @@ def main(mode):
                 for thisfrac, thispatch in zip(fracs, patches):
                     color = plt.cm.spring(norm(thisfrac))
                     thispatch.set_facecolor(color)
-            newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " lnNSAF Values for Scrappy Data.jpg")
+            newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " -log(e) Values for Scrappy Data.jpg")
             plt.savefig(newpath)
 
         for y in range(len(name)):
@@ -652,7 +652,7 @@ def main(mode):
                 for thisfrac, thispatch in zip(fracs, patches):
                     color = plt.cm.plasma(norm(thisfrac))
                     thispatch.set_facecolor(color)
-            newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " -log(e) Values for Scrappy Data.jpg")
+            newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " lnNSAF Values for Scrappy Data.jpg")
             plt.savefig(newpath)
             plt.close()
 
@@ -690,7 +690,7 @@ def main(mode):
 
                 for protein in filtered[y]:
                     ttest = []
-                    combination = [x for x in itertools.combinations(filtered[y][protein][2], 3)]
+                    combination = [x for x in itertools.combinations(filtered[y][protein][4], 3)]
                     for f in range(10):
                         t = stats.ttest_ind(combination[f], combination[-(f + 1)])[1]
                         ttest.append(t)
