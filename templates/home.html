@@ -42,7 +42,7 @@ $("#textBox").keyup(function(){
    $("#message").val($(this).val());
 });</script>
 
-<form id="uploadbanner" enctype="multipart/form-data" method="post" action="/upload">
+<form id="uploadbanner" enctype="multipart/form-data" method="post" action="{{ url_for('home') }}">
     <div class="form-group">
 
 <h1>Welcome to PepWitch</h1>
