@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import glob
 import os.path
 import time
@@ -16,6 +17,8 @@ import bisect
 from sys import argv
 import shutil
 import sys
+from sklearn.decomposition import PCA as sklearnPCA
+from sklearn import preprocessing
 
 def main(mode):
 
@@ -127,13 +130,13 @@ def main(mode):
             control = filenames[0]
             wild = filenames[1]
 
-        defaultvals = input("[Y/N] Do you want to use the default value set for Disregard(0), Minimum Spectral Count(5), Spectral Fraction(0.1), TTest P value(0.05), Engine(GPM)")
+        defaultvals = input("[Y/N] Do you want to use the default value set for Disregard(0), Minimum Spectral Count(5), Spectral Fraction(0.1), TTest P value(0.05)")
         if defaultvals == "N":
-            dis = input("Disregard: ")
-            minspc = input("Min SPC: ")
-            specfrac = input("Spectral Fraction: ")
-            pval = input("P Value: ")
-            engine = input("Engine")
+            dis = int(input("Disregard: "))
+            minspc = int(input("Min SPC: "))
+            specfrac = float(input("Spectral Fraction: "))
+            pval = float(input("P Value: "))
+        engine = input("Engine: GPM or PD ")
 
         return filenames, control, wild, replicatecarry, dis, minspc, specfrac, pval, engine
 
@@ -164,7 +167,7 @@ def main(mode):
     starttime = time.perf_counter()
 
     ## This class imports the .csv files into our workflow and makes a list of the replicates.
-    def ImportProteinFiles(inputnames):
+    def ImportProteinFiles(inputnames, engine):
         print("Importing .csv files...")
 
         filenames = inputnames
@@ -174,30 +177,31 @@ def main(mode):
 
         for name in filenames:
 
-            if Engine == "GPM":
+            if engine == "GPM":
                 try:
-                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,2,5,3],  dtype = ('|U16', 'float32','float32','float32')).tolist() for x in glob.glob(str(WorkingDirectory) + "/" + str(name) + "*.csv")] # Imports Protein Name, Spectral Count, Mol. Weight, score
-                except ValueError:
-                    print("######################################")
-                    print("Error #4: Your CSV file is empty or incompatible.")
-                    exit()
-            elif Engine == "PD":
-                try:
-                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,7,9,2],  dtype = ('|U16', 'float32','float32','float32')).tolist() for x in glob.glob(str(WorkingDirectory) + "/" + str(name) + "*.csv")] # Imports Protein Name, PSM, Mol. Weight, score
+                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,2,5,3], filling_values = 0.01, dtype = ('|U16', 'float32','float32','float32')).tolist() for x in glob.glob(str(WorkingDirectory) + "/" + str(name) + "*.csv")] # Imports Protein Name, Spectral Count, Mol. Weight, score
                 except ValueError:
                     print("######################################")
                     print("Error #4: Your CSV file is empty or incompatible.")
                     exit()
 
-            totaldict = [ dict((row[0], row[1:]) for row in t) for t in total ]
-            uniquenameset = set(x for data in totaldict for x in data) #(for data in totaldict: for x in data: x)
+            if engine == "PD":
+                try:
+                    total = [np.genfromtxt(x, delimiter = ',', skip_header = 1, usecols = [0,4,7,2], filling_values = 0.01, dtype = ('|U16','float32','float32','float32')).tolist() for x in glob.glob(str(WorkingDirectory) + "/" + str(name) + "*.csv")] # Imports Protein Name, PSM, Mol. Weight, score
+                except ValueError:
+                    print("######################################")
+                    print("Error #4: Your CSV file is empty or incompatible.")
+                    exit()
+
+            totaldict = [dict((row[0], row[1:]) for row in t) for t in total]
+            uniquenameset = set(x for data in totaldict for x in data)  # (for data in totaldict: for x in data: x)
 
             TotalDataIDsL.append(total)
             TotalDataIDsD.append(totaldict)
             UniqueNames.append(uniquenameset)
 
         return TotalDataIDsL, UniqueNames, TotalDataIDsD
-    TotalDataIDsList, UniqueNameList, TotalDataIDsDictionary, = ImportProteinFiles(CSVInputName)
+    TotalDataIDsList, UniqueNameList, TotalDataIDsDictionary, = ImportProteinFiles(CSVInputName, Engine)
 
     ## This will take the Total ID data and produce NSAF values based off the original state
     def CalculatelnNSAF(flatlist):
@@ -256,27 +260,52 @@ def main(mode):
     AllDataDict = CalculatelnNSAF(TotalDataIDsList)
 
     # This will take the NSAF data and, using the Unique values from all replicates, produce a filtered Scrappy Rules Dictionary.
-    def CollectUniqueIdsAndSpectra(unique, alldata, spec):
+    def CollectUniqueIdsAndSpectra(unique, alldata, spec, engine):
 
         print("Finding Unique IDs...")
 
         TotalFilter = []
 
-        for y in range(len(unique)): #for every test state [control, wild]
+        if engine == "GPM":
 
-            filteredvaluesdict = {} # This is Scrappy, basically. Conducts as minimum spectral count and disregard replicate drop function
-            for name in unique[y]:
-                if ([x[0] for x in (data.get(name, [0]) for data in alldata[y])].count(0) <= Disregard) and (sum(x[0] for x in (data.get(name, [0]) for data in alldata[y])) >= MinSpc):
-                    filteredvaluesdict[name] = [[x[0] for x in (data.get(name, [spec]) for data in alldata[y])], #SpC
-                                                [b for b in (next(x for x in (data.get(name, [spec])[1:2] for data in alldata[y]) if x))], #Molw
-                                                [i[2] for i in (data.get(name, [spec]) for data in alldata[y])], #Score
-                                                [i[3] for i in (data.get(name, [spec]) for data in alldata[y])], #SAF
-                                                [i[4] for i in (data.get(name, [spec]) for data in alldata[y])] #lnNSAF
-                                                ]
-            TotalFilter.append(filteredvaluesdict)
+            for y in range(len(unique)): #for every test state [control, wild]
+
+                filteredvaluesdict = {} # This is Scrappy, basically. Conducts as minimum spectral count and disregard replicate drop function
+                for name in unique[y]:
+                    if ([x[0] for x in (data.get(name, [0]) for data in alldata[y])].count(0) <= Disregard) and (sum(x[0] for x in (data.get(name, [0]) for data in alldata[y])) >= MinSpc):
+                        filteredvaluesdict[name] = [[x[0] for x in (data.get(name, [spec]) for data in alldata[y])], #SpC
+                                                    [b for b in (next(x for x in (data.get(name, [spec])[1:2] for data in alldata[y]) if x))], #Molw
+                                                    [i[2] for i in (data.get(name, [spec]) for data in alldata[y])], #Score
+                                                    [i[3] for i in (data.get(name, [spec]) for data in alldata[y])], #SAF
+                                                    [i[4] for i in (data.get(name, [spec]) for data in alldata[y])] #lnNSAF
+                                                    ]
+                TotalFilter.append(filteredvaluesdict)
+
+        elif engine == "PD":
+
+            for y in range(len(unique)):  # for every test state [control, wild]
+
+                filteredvaluesdict = {}  # This is Scrappy, basically. Conducts as minimum spectral count and disregard replicate drop function
+                for name in unique[y]:
+                    if ([x[0] for x in (data.get(name, [0]) for data in alldata[y])].count(0) <= Disregard) and (
+                            sum(x[0] for x in (data.get(name, [0]) for data in alldata[y])) >= MinSpc):
+                        filteredvaluesdict[name] = [[x[0] for x in (data.get(name, [spec]) for data in alldata[y])],
+                                                    # SpC
+                                                    [b for b in (next(
+                                                        x for x in (data.get(name, [spec])[1:2] for data in alldata[y])
+                                                        if x))],  # Molw
+                                                    [i[2] + spec for i in (data.get(name, [spec]) for data in alldata[y])],
+                                                    # Score
+                                                    [i[3] for i in (data.get(name, [spec]) for data in alldata[y])],
+                                                    # SAF
+                                                    [i[4] for i in (data.get(name, [spec]) for data in alldata[y])]
+                                                    # lnNSAF
+                                                    ]
+                TotalFilter.append(filteredvaluesdict)
 
         return TotalFilter
-    ScrappyIDsDict = CollectUniqueIdsAndSpectra(UniqueNameList, AllDataDict, SpectralFraction)
+
+    ScrappyIDsDict = CollectUniqueIdsAndSpectra(UniqueNameList, AllDataDict, SpectralFraction, Engine)
 
     def DoTTest(filter, control, wild, Q, inputnames):
 
@@ -306,17 +335,17 @@ def main(mode):
 
                 if Q == -1:
                     for name in setstateControl.intersection(setstateWild):
-                        FC = mean(filter[c][name][4]) / mean(filter[w][name][4])
-                        ttestdict[name] = stats.ttest_rel(filter[c][name][4], filter[w][name][4])[1], filter[c][name], filter[w][name], FC
+                        FC = mean(filter[c][name][3]) / mean(filter[w][name][3])
+                        ttestdict[name] = stats.ttest_ind(filter[c][name][4], filter[w][name][4])[1], filter[c][name], filter[w][name], FC
                     ttestlist.append(ttestdict)
                 elif Q != -1:
                     for name in setstateControl.intersection(setstateWild):
-                        ttestdict[name] = stats.ttest_rel(filter[c][name][4], filter[w][name][4])[1],
+                        ttestdict[name] = stats.ttest_ind(filter[c][name][4], filter[w][name][4])[1],
                     tvals = [i[0] for i in ttestdict.values()]
                     qtestlista.append(multipletests(tvals, method='fdr_bh')[1])
                     g = 0
                     for name in setstateControl.intersection(setstateWild):
-                        FC = mean(filter[c][name][4]) / mean(filter[w][name][4])
+                        FC = mean(filter[c][name][3]) / mean(filter[w][name][3])
                         qtestdict[name] = qtestlista[0][g], filter[c][name], filter[w][name], FC
                         g += 1
                     qtestlist.append(qtestdict)
@@ -349,16 +378,16 @@ def main(mode):
 
             if Q == -1:
                 for name in setstateA.intersection(setstateB):
-                    FC = mean(filter[0][name][4]) / mean(filter[1][name][4])
-                    ttestdict[name] = stats.ttest_rel(filter[0][name][4], filter[1][name][4])[1], filter[0][name], filter[1][name], FC
+                    FC = mean(filter[0][name][3]) / mean(filter[1][name][3]) #Fold change calculated from SAF, not lnNSAF
+                    ttestdict[name] = stats.ttest_ind(filter[0][name][4], filter[1][name][4])[1], filter[0][name], filter[1][name], FC
             elif Q != -1:
                 for name in setstateA.intersection(setstateB):
-                    ttestdict[name] = stats.ttest_rel(filter[0][name][4], filter[1][name][4])[1],
+                    ttestdict[name] = stats.ttest_ind(filter[0][name][4], filter[1][name][4])[1],
                 tvals = [i[0] for i in ttestdict.values()]
                 qtestlist.append(multipletests(tvals, method='fdr_bh')[1])
                 g = 0
                 for name in setstateA.intersection(setstateB):
-                    FC = mean(filter[0][name][4]) / mean(filter[1][name][4])
+                    FC = mean(filter[0][name][3]) / mean(filter[1][name][3]) #Fold change calculated from SAF, not lnNSAF
                     qtestdict[name] = qtestlist[0][g], filter[0][name], filter[1][name], FC
                     g += 1
 
@@ -375,6 +404,106 @@ def main(mode):
                 return ttestdict, uniqueA, uniqueB
             if Q != -1:
                 return qtestdict, uniqueA, uniqueB
+
+    def PrincipleComponent(inputnames, scrappy, mode, con, wil):
+
+        if wil is not list:
+            wild = [wil, wil]
+        else:
+            wild = wil
+
+        if mode == "Data":
+            for state in range(len(inputnames)):
+                arr = []
+                IDs = list(str(i) for i in scrappy[state])
+                for protein in scrappy[state]:
+                    arr.append(scrappy[state][protein][3]) #SAF data, not lnNSAF
+
+                data = preprocessing.StandardScaler().fit_transform(arr)
+                data2 = sklearnPCA(2).fit_transform(data)
+
+                if sklearnPCA(2).fit(data).explained_variance_ratio_[0] > .5:
+                    abspc1 = list(abs(i[0]) for i in data2)
+                    outliers = list(IDs[index] for index, item in enumerate(abspc1) if stats.percentileofscore(abspc1, item) > 95)
+                    print(len(outliers))
+
+                principalDf = pd.DataFrame(data = data2, columns = ['PC1', 'PC2'])
+                fig = plt.figure(figsize = (6,6))
+                ax = fig.add_subplot(1,1,1)
+                ax.set_xlabel("PC1", fontsize=14)
+                ax.set_ylabel("PC2", fontsize=14)
+                ax.text(0,1.5, str(sklearnPCA(2).fit(data).explained_variance_ratio_))
+                ax.set_title("2 Component PCA Fit Transform for " + str(inputnames[state]), fontsize=14)
+                ax.scatter(principalDf['PC1'], principalDf['PC2'], s=50)
+                ax.grid()
+
+                subdirectory = "/DataAnalysis/"
+                newpath = os.path.join(DayandTime + subdirectory, str(inputnames[state]) + " PCA.jpg")
+                plt.savefig(newpath)
+                plt.clf()
+
+        if mode == "TTest":
+            for state in range(len(inputnames)-1):
+                arr = []
+                IDs = list(str(i) for i in scrappy)
+                for protein in scrappy:
+                    arr.append(scrappy[protein][1][4] + scrappy[protein][2][4])  # lnNSAF data
+
+                data = preprocessing.StandardScaler().fit_transform(arr)
+                data2 = sklearnPCA(2).fit_transform(data)
+
+                if sklearnPCA(2).fit(data).explained_variance_ratio_[0] > .5:
+                    abspc1 = list(abs(i[0]) for i in data2)
+                    outliers = list(
+                        IDs[index] for index, item in enumerate(abspc1) if stats.percentileofscore(abspc1, item) > 95)
+                    print(len(outliers))
+
+                principalDf = pd.DataFrame(data=data2, columns=['PC1', 'PC2'])
+                fig = plt.figure(figsize=(6, 6))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.set_xlabel("PC1", fontsize=14)
+                ax.set_ylabel("PC2", fontsize=14)
+                ax.text(0, 1.5, str(sklearnPCA(2).fit(data).explained_variance_ratio_))
+                ax.set_title("2 Component PCA Fit Transform for TTest " + str(con) + " vs " + str(wild[state]), fontsize=12)
+                ax.scatter(principalDf['PC1'], principalDf['PC2'], s=50)
+                ax.grid()
+
+                subdirectory = "/T Tests/"
+                newpath = os.path.join(DayandTime + subdirectory, str(con) + " vs " + str(wild[state]) + " PCA.jpg")
+                plt.savefig(newpath)
+                plt.clf()
+
+    def Volcano(inputnames, ttest, con, wil):
+
+        if wil is not list:
+            wild = [wil, wil]
+        else:
+            wild = wil
+
+        for state in range(len(inputnames)-1):
+
+            dict = {"ID": list(i for i in ttest), "P-Value": list(ttest[i][0] for i in ttest), "Fold Change": list(ttest[i][3] for i in ttest)}
+            dict2 = {"P-Value": dict["P-Value"], "Fold Change": dict["Fold Change"]}
+            df1 = pd.DataFrame(dict2["P-Value"])
+            df2 = pd.DataFrame(dict2["Fold Change"])
+            transform_df1 = pd.DataFrame(preprocessing.StandardScaler().fit_transform(df1), columns=["P-Value"])
+            transform_df2 = pd.DataFrame(preprocessing.StandardScaler().fit_transform(df2), columns=["Fold Change"])
+            transform_dffinal = pd.DataFrame()
+            transform_dffinal["P-Value"] = transform_df1
+            transform_dffinal["Fold Change"] = transform_df2
+
+            fig = plt.figure(figsize=(6, 6))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.set_xlabel("log FC", fontsize=14)
+            ax.set_ylabel("log Significance", fontsize=14)
+            ax.set_title("Volcano Plot for " + str(con) + " vs " + str(wild[state]), fontsize=14)
+            ax.scatter(transform_dffinal["Fold Change"], transform_dffinal["P-Value"], s=50)
+            ax.grid()
+
+            subdirectory = "/T Tests/"
+            newpath = os.path.join(DayandTime + subdirectory, str(con) + " vs " + str(wild[state]) + " Volcano.jpg")
+            plt.savefig(newpath)
+            plt.clf()
 
     def ExcelSampleOutputs(name, tteststart, uniqueastart, uniquebstart, Q, Qvalue, control, wild, Samecut, repnum):
 
@@ -594,11 +723,6 @@ def main(mode):
 
     def GraphValues(filter, name, unfilteredstart, TTest, uniquea, uniqueb):
 
-        if len(name) == 1:
-            unfiltered = unfilteredstart
-        else:
-            unfiltered = unfilteredstart
-
         print("Producing graphs and figures...")
 
         subdirectory = "/DataAnalysis/"
@@ -632,13 +756,13 @@ def main(mode):
             for q in range(DesiredReplicateNumber):
                 values = [filter[y][x][2][q] for x in filter[y].keys()]
                 N, bins, patches = ax[q].hist(values, bins=50, range=[min(values),max(values)], label=str(name[y]))
-                ax[q].title.set_text("NSAF Values for " + str(name[y]) + " R" + str(q+1))
+                ax[q].title.set_text("Score Values for " + str(name[y]) + " R" + str(q+1))
                 fracs = N.astype(float) / N.max()
                 norm = colors.Normalize(fracs.min(), fracs.max())
                 for thisfrac, thispatch in zip(fracs, patches):
                     color = plt.cm.spring(norm(thisfrac))
                     thispatch.set_facecolor(color)
-            newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " -log(e) Values for Scrappy Data.jpg")
+            newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " Score Values for Scrappy Data.jpg")
             plt.savefig(newpath)
 
         for y in range(len(name)):
@@ -646,7 +770,7 @@ def main(mode):
             for q in range(DesiredReplicateNumber):
                 values = [filter[y][x][4][q] for x in filter[y].keys()]
                 N, bins, patches = ax[q].hist(values, bins=100, range=[min(values),max(values)], label=str(name[y]))
-                ax[q].title.set_text("log(e) Values for " + str(name[y]) + " R" + str(q+1))
+                ax[q].title.set_text("lnNSAF Values for " + str(name[y]) + " R" + str(q+1))
                 fracs = N.astype(float) / N.max()
                 norm = colors.Normalize(fracs.min(), fracs.max())
                 for thisfrac, thispatch in zip(fracs, patches):
@@ -658,11 +782,15 @@ def main(mode):
 
     if len(CSVInputName) > 1:
         ExcelDataQuality(CSVInputName, ScrappyIDsDict, DesiredReplicateNumber)
+        PrincipleComponent(CSVInputName, ScrappyIDsDict, "Data",0,0)
         TTest, UniqueA, UniqueB = DoTTest(ScrappyIDsDict, Control, Wild, -1, CSVInputName)
         ExcelSampleOutputs(CSVInputName, TTest, UniqueA, UniqueB, -1, 0, Control, Wild, SameSamePValue, DesiredReplicateNumber)
+        PrincipleComponent(CSVInputName, TTest, "TTest", Control, Wild)
+        Volcano(CSVInputName, TTest, Control, Wild)
 
     if len(CSVInputName) == 1:
         ExcelDataQuality(CSVInputName, ScrappyIDsDict, DesiredReplicateNumber)
+        PrincipleComponent(CSVInputName, ScrappyIDsDict, "Data",0,0)
 
     GraphValues(ScrappyIDsDict, CSVInputName, AllDataDict, TTest, UniqueA, UniqueB)
 
@@ -892,7 +1020,7 @@ def main(mode):
     #End Processes
     endtime = time.perf_counter()
     print("Total Processing time: " + str(endtime - starttime))
-    shutil.make_archive(os.path.dirname(os.path.realpath(__file__)) + "/Output", 'zip', DayandTime)
+    shutil.make_archive(os.path.dirname(os.path.realpath(__file__)) + "/Output " + str(CSVInputName), 'zip', DayandTime)
     shutil.rmtree(DayandTime)
 
 if __name__ == "__main__":
