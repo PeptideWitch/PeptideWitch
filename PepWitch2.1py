@@ -23,13 +23,16 @@ from sklearn import preprocessing
 def main(mode):
 
     #Setting up a few housekeeping items.
-    np.set_printoptions(precision=2)
-    TTest = False
-    UniqueA = False
-    UniqueB = False
-    UpReg = []
-    DownReg = []
-    Unchanged = []
+    def Housekeeper():
+        np.set_printoptions(precision=2)
+        tTest = False
+        uniqueA = False
+        uniqueB = False
+        upReg = []
+        downReg = []
+        unchanged = []
+        return tTest, uniqueA, uniqueB, upReg, downReg, unchanged
+    TTest, UniqueA, UniqueB, UpReg, DownReg, Unchanged = Housekeeper()
 
     #A function that sets up all the info needed for PepWitch to collect user data names, etc.
     def GetInputName():
@@ -40,8 +43,8 @@ def main(mode):
         dis = 0
         minspc = 5
         specfrac = 0.1
-        engine = "GPM"
         pval = 0.05
+        engine = "No"
 
         print("Welcome to PyWitch!")
         print("You can either import a single state for analysis or perform a two-state comparison.")
@@ -136,7 +139,10 @@ def main(mode):
             minspc = int(input("Min SPC: "))
             specfrac = float(input("Spectral Fraction: "))
             pval = float(input("P Value: "))
-        engine = input("Engine: GPM or PD ")
+        while engine != "GPM" or "PD":
+            engine = input("Engine ~ GPM or PD: ")
+            if engine == "GPM" or "PD":
+                break
 
         return filenames, control, wild, replicatecarry, dis, minspc, specfrac, pval, engine
 
@@ -412,42 +418,53 @@ def main(mode):
         else:
             wild = wil
 
+        safoptions = [3,4]
+        saftext = ["SAF", "lnNSAF"]
+
         if mode == "Data":
-            for state in range(len(inputnames)):
-                arr = []
-                IDs = list(str(i) for i in scrappy[state])
-                for protein in scrappy[state]:
-                    arr.append(scrappy[state][protein][3]) #SAF data, not lnNSAF
+            print("Now conducting PCA for Individual Replicates")
+            for index, option in enumerate(safoptions):
+                for state in range(len(inputnames)):
+                    arr = []
+                    IDs = list(str(i) for i in scrappy[state])
+                    for protein in scrappy[state]:
+                        arr.append(scrappy[state][protein][option]) #SAF data first, then lnNSAF second
 
-                data = preprocessing.StandardScaler().fit_transform(arr)
-                data2 = sklearnPCA(2).fit_transform(data)
+                    data = preprocessing.StandardScaler().fit_transform(arr)
+                    data2 = sklearnPCA(2).fit_transform(data)
 
-                if sklearnPCA(2).fit(data).explained_variance_ratio_[0] > .5:
-                    abspc1 = list(abs(i[0]) for i in data2)
-                    outliers = list(IDs[index] for index, item in enumerate(abspc1) if stats.percentileofscore(abspc1, item) > 95)
-                    print(len(outliers))
+                    if sklearnPCA(2).fit(data).explained_variance_ratio_[0] > .5:
+                        abspc1 = list(abs(i[0]) for i in data2)
+                        outliers = list(IDs[index] for index, item in enumerate(abspc1) if stats.percentileofscore(abspc1, item) > 95)
 
-                principalDf = pd.DataFrame(data = data2, columns = ['PC1', 'PC2'])
-                fig = plt.figure(figsize = (6,6))
-                ax = fig.add_subplot(1,1,1)
-                ax.set_xlabel("PC1", fontsize=14)
-                ax.set_ylabel("PC2", fontsize=14)
-                ax.text(0,1.5, str(sklearnPCA(2).fit(data).explained_variance_ratio_))
-                ax.set_title("2 Component PCA Fit Transform for " + str(inputnames[state]), fontsize=14)
-                ax.scatter(principalDf['PC1'], principalDf['PC2'], s=50)
-                ax.grid()
+                    principalDf = pd.DataFrame(data = data2, columns = ['PC1', 'PC2'])
+                    fig = plt.figure(figsize = (6,6))
+                    ax = fig.add_subplot(1,1,1)
+                    ax.set_xlabel("PC1", fontsize=14)
+                    ax.set_ylabel("PC2", fontsize=14)
+                    ax.text(0,1.5, str(sklearnPCA(2).fit(data).explained_variance_ratio_))
+                    ax.set_title("2 Component PCA Fit Transform for " + str(inputnames[state] + " " + str(saftext[index])), fontsize=14)
+                    ax.scatter(principalDf['PC1'], principalDf['PC2'], s=50)
+                    ax.grid()
 
-                subdirectory = "/DataAnalysis/"
-                newpath = os.path.join(DayandTime + subdirectory, str(inputnames[state]) + " PCA.jpg")
-                plt.savefig(newpath)
-                plt.clf()
+                    subdirectory = "/DataAnalysis/"
+                    newpath = os.path.join(DayandTime + subdirectory, str(inputnames[state] + " " + str(saftext[index])) + " PCA.jpg")
+                    plt.savefig(newpath)
+                    plt.clf()
 
         if mode == "TTest":
+
+            if len(inputnames) == 2:
+                scrappynew = [scrappy, scrappy]
+            if len(inputnames) > 2:
+                scrappynew = scrappy
+
+            print("Now conducting PCA for Ttest states")
             for state in range(len(inputnames)-1):
                 arr = []
-                IDs = list(str(i) for i in scrappy)
-                for protein in scrappy:
-                    arr.append(scrappy[protein][1][4] + scrappy[protein][2][4])  # lnNSAF data
+                IDs = list(str(i) for i in scrappynew[state])
+                for protein in scrappynew[state]:
+                    arr.append(scrappynew[state][protein][1][4] + scrappynew[state][protein][2][4])  # lnNSAF data
 
                 data = preprocessing.StandardScaler().fit_transform(arr)
                 data2 = sklearnPCA(2).fit_transform(data)
@@ -456,7 +473,6 @@ def main(mode):
                     abspc1 = list(abs(i[0]) for i in data2)
                     outliers = list(
                         IDs[index] for index, item in enumerate(abspc1) if stats.percentileofscore(abspc1, item) > 95)
-                    print(len(outliers))
 
                 principalDf = pd.DataFrame(data=data2, columns=['PC1', 'PC2'])
                 fig = plt.figure(figsize=(6, 6))
@@ -475,14 +491,21 @@ def main(mode):
 
     def Volcano(inputnames, ttest, con, wil):
 
+        print("Making a Volcano plot")
+
         if wil is not list:
             wild = [wil, wil]
         else:
             wild = wil
 
+        if len(inputnames) == 2:
+            ttestnew = [ttest, ttest]
+        if len(inputnames) > 2:
+            ttestnew = ttest
+
         for state in range(len(inputnames)-1):
 
-            dict = {"ID": list(i for i in ttest), "P-Value": list(ttest[i][0] for i in ttest), "Fold Change": list(ttest[i][3] for i in ttest)}
+            dict = {"ID": list(i for i in ttestnew[state]), "P-Value": list(ttestnew[state][i][0] for i in ttestnew[state]), "Fold Change": list(ttestnew[state][i][3] for i in ttestnew[state])}
             dict2 = {"P-Value": dict["P-Value"], "Fold Change": dict["Fold Change"]}
             df1 = pd.DataFrame(dict2["P-Value"])
             df2 = pd.DataFrame(dict2["Fold Change"])
@@ -503,6 +526,36 @@ def main(mode):
             subdirectory = "/T Tests/"
             newpath = os.path.join(DayandTime + subdirectory, str(con) + " vs " + str(wild[state]) + " Volcano.jpg")
             plt.savefig(newpath)
+            plt.clf()
+
+    def HeatMap(inputnames, ttest):
+
+        print("Making a HeatMap")
+
+        if ttest is not list:
+            ttestnew = [ttest, ttest]
+        else:
+            ttestnew = ttest
+
+        for state in range(len(inputnames)-1):
+
+            heatdataControl = []
+            heatdataWild = []
+            heatdata = []
+
+            for protein in ttestnew[state]:
+                heatdataControl.append(ttestnew[state][protein][1][4]) # State 1 SAF
+                heatdataWild.append(ttestnew[state][protein][2][4]) # State 2 SAF
+
+            for row in range(len(heatdataWild)):
+                heatdata.append(heatdataControl[row] + heatdataWild[row])
+
+            fig = plt.figure(figsize=(60, 60))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.imshow(heatdata)
+            ax.set_title("HeatMap for Control and Wild")
+            ax.set_aspect('auto')
+            plt.show()
             plt.clf()
 
     def ExcelSampleOutputs(name, tteststart, uniqueastart, uniquebstart, Q, Qvalue, control, wild, Samecut, repnum):
@@ -787,6 +840,7 @@ def main(mode):
         ExcelSampleOutputs(CSVInputName, TTest, UniqueA, UniqueB, -1, 0, Control, Wild, SameSamePValue, DesiredReplicateNumber)
         PrincipleComponent(CSVInputName, TTest, "TTest", Control, Wild)
         Volcano(CSVInputName, TTest, Control, Wild)
+        #HeatMap(CSVInputName, TTest)
 
     if len(CSVInputName) == 1:
         ExcelDataQuality(CSVInputName, ScrappyIDsDict, DesiredReplicateNumber)
@@ -939,6 +993,7 @@ def main(mode):
                     chartvalues.append(mean(y[x] for y in fdrvalues))
                 ax.bar(categories, chartvalues, bar_width)
                 ax.title.set_text("Average Q value FDR")
+                ax.text(float(bisect.bisect_left(chartvalues, 1.0)*0.05),10,str(bisect.bisect_left(chartvalues, 1.0)*0.05))
                 newpath = os.path.join(DayandTime + subdirectory, str(name[y]) + " Average Q value FDR.jpg")
                 plt.savefig(newpath)
 
